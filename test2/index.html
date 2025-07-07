@@ -160,7 +160,7 @@
     const copyButton = document.getElementById('copyButton');
     const loader = document.getElementById('loader');
 
-    generateButton.addEventListener('click', async function (event) {
+    form.addEventListener('submit', async function (event) {
         event.preventDefault();
         
         const topic = topicInput.value.trim();
