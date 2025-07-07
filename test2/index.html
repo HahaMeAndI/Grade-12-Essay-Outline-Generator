@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Essay Outline Helper</title>
+    <style>
+        /* A little bit of styling to make it look friendly and clean for students */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        p.instructions {
+            text-align: center;
+            color: #5f6368;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202124;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe1e5;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #185abc;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        button:disabled {
+            background-color: #9fbfdf;
+            cursor: not-allowed;
+        }
+
+        .loader {
+            display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a73e8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 20px;
+            border: 1px solid #dfe1e5;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            white-space: pre-wrap; /* This preserves line breaks from the AI */
+            line-height: 1.6;
+            display: none; /* Hidden until there's content */
+        }
+        
+        #copyButton {
+            display: none; /* Hidden by default */
+            margin-top: 15px;
+            background-color: #34a853;
+        }
+        
+        #copyButton:hover {
+            background-color: #1e8e3e;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Grade 12 Essay Outline Helper</h1>
+        <p class="instructions">Enter your essay topic below and get a great starting outline!</p>
+
+        <form id="outlineForm">
+            <div class="form-group">
+                <label for="topic">What is your essay topic?</label>
+                <input type="text" id="topic" placeholder="e.g., 'The importance of recycling'" required>
+            </div>
+            <button type="submit" id="generateBtn">Generate Outline</button>
+        </form>
+
+        <div class="loader" id="loader"></div>
+        
+        <div id="result"></div>
+        <button id="copyButton">Copy Outline</button>
+
+    </div>
+
+  <script>
+    const form = document.getElementById('outlineForm');
+    const topicInput = document.getElementById('topic');
+    const resultDiv = document.getElementById('result');
+    const generateButton = document.getElementById('generateBtn');
+    const copyButton = document.getElementById('copyButton');
+    const loader = document.getElementById('loader');
+
+    generateButton.addEventListener('click', async function (event) {
+        event.preventDefault();
+        
+        const topic = topicInput.value.trim();
+        if (!topic) {
+            alert('Please enter a topic.');
+            return;
+        }
+
+        generateButton.disabled = true;
+        generateButton.textContent = 'Generating...';
+        loader.style.display = 'block';
+        resultDiv.style.display = 'none';
+        copyButton.style.display = 'none';
+        
+        try {
+            const response = await fetch('/generate-outline', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ topic })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`The server returned an error. Please try again later. (Status: ${response.status})`);
+            }
+
+            // 1. Tell the browser to parse the response as JSON
+            const data = await response.json();
+            
+            // 2. Navigate through the JSON structure to get the clean text
+            const outline = data.candidates[0].content.parts[0].text;
+            
+            // 3. Update the UI with the clean text
+            resultDiv.innerHTML = marked.parse(outline.trim());
+            resultDiv.style.display = 'block';
+            copyButton.style.display = 'block';
+
+        } catch (error) {
+            console.error('An error occurred:', error);
+            resultDiv.textContent = error.message;
+            resultDiv.style.display = 'block';
+        
+        } finally {
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generate Outline';
+            loader.style.display = 'none';
+        }
+    });
+
+    copyButton.addEventListener('click', function () {
+        if (!resultDiv.textContent) return;
+        
+        navigator.clipboard.writeText(resultDiv.textContent).then(() => {
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy Outline';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text.');
+        });
+    });
+</script>
+</body>
+</html>
